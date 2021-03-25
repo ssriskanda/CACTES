@@ -1,1 +1,1241 @@
-## Input Code here 
+---
+title: "CACTES COVID Analysis"
+author: "Sinduja Sriskanda"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(data.table)
+library(knitr)   # contains kable() function
+library(reshape2)
+library(varhandle)
+library(GGally)
+
+setwd("~/Documents/CACTES")
+#loading data
+data <- read_csv("Combined Cleaned Data.csv")
+```
+
+
+**Descriptive statistics – How many respondents are actually head of household?**
+```{r}
+count = data["HH_Name"] == data["Name_of_Respondent"]
+summary(count)
+```
+True = Yes (40 respondents are actually head of household)
+False = No (89 people who are responding are not head of household)
+NA = Not applicable
+
+**Descriptive statistics – ethnicity**
+```{r}
+#switch letter option with the name of ethnicity
+data$Q1[data$Q1 == "A"] <- "Bunyankole"
+data$Q1[data$Q1 == "B"] <- "Muganda"
+data$Q1[data$Q1 == "C"] <- "Mukiga"
+data$Q1[data$Q1 == "D"] <- "Musoga"
+data$Q1[data$Q1 == "E"] <- "Muhaya"
+data$Q1[data$Q1 == "F"] <- "Other"
+
+#code to print bar graph
+ggplot(data, aes(x = Q1)) + geom_bar(fill="steelblue") + labs(x = "Ethnicity", y = "Count")
+
+```
+
+**Descriptive statistics – What are the 3 most common ethnicities? ** 
+
+```{r}
+#count unique data points for Question 1
+Q1_table <- data %>%
+  count(Q1, sort = TRUE)
+
+total <- dim(data)[1] #total number of observations
+
+Q1_table$Percentage <- (Q1_table$n/total)*100 # add percentage column
+
+#rename the table with appropiate column names
+Q1_table <- Q1_table %>%
+  rename(Ethnicity = Q1,
+         Count = n)
+
+#print table
+print(Q1_table)
+```
+
+
+
+**Descriptive statistics – religion**
+
+```{r}
+#switch letter option with the name of religion
+data$Q2[data$Q2 == "A"] <- "Christian"
+data$Q2[data$Q2 == "B"] <- "Christian"
+data$Q2[data$Q2 == "C"] <- "Christian"
+data$Q2[data$Q2 == "A,B"] <- "Christian"
+data$Q2[data$Q2 == "B,C"] <- "Christian"
+data$Q2[data$Q2 == "D"] <- "Muslim"
+data$Q2[data$Q2 == "E"] <- "Born Again"
+data$Q2[data$Q2 == "F"] <- "No religion"
+data$Q2[data$Q2 == "G"] <- "Other"
+
+#code to print bar graph
+ggplot(data, aes(x = Q2)) + geom_bar(fill="steelblue") + labs(x = "Religion", y = "Count")
+
+```
+NOTE: Some people found themselves to be a mix of the religions (Catholic, Protestant, etc..) so all branches were merged into Christianity
+
+**Descriptive statistics – What is the gender breakdown? **
+
+```{r}
+
+data$Female[data$Female == 1] <- "Female"
+data$Female[data$Female == 0] <- "Male"
+
+#code to print bar graph
+ggplot(data, aes(x = Female)) + geom_bar(fill="steelblue") + labs(x = "Religion", y = "Count")
+
+#rename the table with appropiate column names
+Female <- data %>%
+  count(Female, sort = TRUE) %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/sum(Count))*100)
+
+print(Female)
+
+```
+
+**Descriptive statistics – What are the 3 most common religions? **
+
+```{r}
+Q2_table <- data %>%
+  count(Q2, sort = TRUE)
+
+Q2_table$Percentage <- (Q2_table$n/total)*100
+Q2_table <- Q2_table %>%
+  rename(Religion = Q2,
+         Count = n)
+print(Q2_table)
+```
+Three most common religions are Catholic (45.74%), Muslim (37.2%), and Anglican (6.2%)
+
+**Descriptive statistics – Education**
+
+```{r}
+data$Q3[data$Q3 == "A"] <- "Primary"
+data$Q3[data$Q3 == "B"] <- "Secondary"
+data$Q3[data$Q3 == "C"] <- "Tertiary"
+data$Q3[data$Q3 == "D"] <- "Bachelors"
+data$Q3[data$Q3 == "E"] <- "Higher than Bachelor"
+data$Q3[data$Q3 == "F"] <- "None"
+
+#factor the options so they go in desired order
+data$Q3 <- factor(data$Q3, levels = c("None", "Primary", "Secondary", "Tertiary", "Bachelors", "Higher than Bachelor"))
+
+
+#code to print bar graph
+ggplot(data, aes(x = Q3)) + geom_bar(fill="steelblue") + labs(x = "Education", y = "Count")
+
+Education <- data %>%
+  count(Q3, sort = TRUE) %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/sum(Count))*100)
+
+print(Education)
+```
+
+
+**Descriptive statistics – what is the percent of respondents that held the highest level of education? **
+
+```{r}
+Q4_table <- data %>%
+  count(Q4)
+
+Q4_table$Percentage <- (Q4_table$n/total)*100
+Q4_table <- Q4_table %>%
+  rename(Highest.Level = Q4,
+         Count = n)
+print(Q4_table)
+```
+30.23% of respondents have the highest level of education in his/her household. 68.99% are not.
+
+
+**Descriptive statistics – What is the [average/media etc.] household size?**
+
+```{r}
+Q6_vector <- data$Q6
+
+#calculate mean
+Q6_mean <- mean(Q6_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+print(Q6_mean)
+
+#calculate median
+Q6_med <- median(Q6_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+print(Q6_med)
+
+
+#create function for mode
+mode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+Q6_mode <- mode(Q6_vector)
+print(Q6_mode)
+
+```
+Mean = 6.630769
+Median = 6
+Mode = 5
+Max = 24
+Min = 1
+
+**What is the average percent of household members that generate an income?**
+```{r}
+names <- c("Q6", "Q10")
+Household_data <- data[names]
+#create percent of workers in each household
+Household_data <- Household_data %>%
+  mutate(Percent.of.Workers = (Q10/Q6)*100)
+#average percent 
+worker_mean <- mean(Household_data$Percent.of.Workers, na.rm = TRUE) #remove any observations that were NA
+
+print(worker_mean)
+```
+The average percent of household members that generate an income is `worker_mean` 
+
+**Descriptive statistics – number of children in the household under the age of 18**
+
+```{r}
+Q7_vector <- data$Q7
+#calculate mean
+Q7_mean <- mean(Q7_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate median
+Q7_med <- median(Q7_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate mode
+Q7_mode <- mode(Q7_vector)
+
+```
+Mean = 3.9375
+Median = 3.5
+Mode = 3
+
+
+**Descriptive statistics – What are the reasons for why children are not attending school?**
+```{r}
+data["Reason"] <- NA
+
+Finance <- c("FUNDS","MONEY","SPONSER", "FEES")
+Motivation <- c("INTEREST","REFUSE")
+Disability<- c("DISABILITY")
+Illness <- c("SICK")
+
+for(word in Finance){
+  for(i in 1:nrow(data)){
+    if(is.na(data[i, "Reason"]) == FALSE){
+      next
+    } 
+    else{
+      data$Reason[i] <- ifelse(grepl(word, data[i,"Q9a"],ignore.case = TRUE),"Lack of Funding",NA)
+    }
+  }
+}
+
+for(word in Motivation){
+  for(i in 1:nrow(data)){
+    if(is.na(data[i, "Reason"]) == FALSE){
+      next
+    } 
+    else{
+      data$Reason[i] <- ifelse(grepl(word, data[i,"Q9a"],ignore.case = TRUE),"Lack of Motivation",NA)
+    }
+  }
+}
+
+for(word in Disability){
+  for(i in 1:nrow(data)){
+    if(is.na(data[i, "Reason"]) == FALSE){
+      next
+    } 
+    else{
+      data$Reason[i] <- ifelse(grepl(word, data[i,"Q9a"],ignore.case = TRUE),"Disability",NA)
+    }
+  }
+}
+
+for(word in Illness){
+  for(i in 1:nrow(data)){
+    if(is.na(data[i, "Reason"]) == FALSE){
+      next
+    } 
+    else{
+      data$Reason[i] <- ifelse(grepl(word, data[i,"Q9a"],ignore.case = TRUE),"Illness",NA)
+    }
+  }
+}
+
+for(i in 1:nrow(data)){
+  if(is.na(data[i,"Reason"]) == FALSE){
+    next
+  }
+  else{
+    data$Reason[i] <- "No Answer"
+  }
+}
+
+
+#code to print bar graphs with those who have more than 0 kids not in school of schooling age 
+kids <- subset(data, Q9 > 0, select = c(Q9, Q9a, Reason))
+
+#code to print bar graph of all cases 
+ggplot(kids, aes(x = Reason)) + geom_bar(fill="steelblue") + labs(x = "Reason", y = "Count")
+
+
+
+kid = as.data.frame(table(kids$Reason))
+kid <- kid %>%
+  mutate(Percentage = (Freq/sum(Freq))*100)
+print(kid)
+```
+
+
+**Descriptive statistics – What is the (average/median) number of people working in a household? **
+
+```{r}
+Q10_vector <- data$Q10
+#calculate mean
+Q10_mean <- mean(Q10_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate median
+Q10_med <- median(Q10_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate mode
+Q10_mode <- mode(Q10_vector)
+```
+Mean = 1.78899
+Median = 2
+Mode = 2
+
+**Descriptive statistics – What sectors does the sample population work in?**
+
+```{r}
+sectors <- c("Agriculture", "Transportation", "Education" ,"Sponsership", "Construction", "Business", "Trade", "Government", "Law", "Health", "Food", "Other")
+
+count <- c(sum(data$agriculture),sum(data$transportation), sum(data$education), sum(data$sponsership), sum(data$construction), sum(data$business), sum(data$trade), sum(data$government), sum(data$law), sum(data$health), sum(data$food), sum(data$other))
+
+Work_data <- tbl_df(cbind(sectors, count))
+Work_data$count <- as.numeric(Work_data$count)
+
+Work_data <- Work_data %>%
+  mutate(Percent.Work = (count/total)*100)
+print(Work_data)
+
+```
+
+**Are there any differences in sectors that people work in between the two districts? **
+
+
+```{r}
+#graph of 2 districts 
+Kalungu <- data %>%
+  filter(District == "KALUNGU") %>%
+  select(District, agriculture, transportation, education, sponsership, construction, business, trade, government, law, health, food, other)
+Masaka <- data %>%
+  filter(District == "MASAKA") %>%
+  select(District, agriculture, transportation, education, sponsership, construction, business, trade, government, law, health, food, other)
+
+#melt data to more friendly format
+Kalungu_melt <- melt(Kalungu, measure.vars = c("agriculture", "transportation", "education", "sponsership", "construction", "business", "trade", "government", "law", "health", "food", "other"))
+Masaka_melt <- melt(Masaka, measure.vars = c("agriculture", "transportation", "education", "sponsership", "construction", "business", "trade", "government", "law", "health", "food", "other"))
+
+
+Kalungu_melt <-  Kalungu_melt %>%
+  group_by(variable) %>%
+  summarise(Total = sum(value)) %>%
+  rename(Sector = variable, Count = Total)
+
+Masaka_melt <-  Masaka_melt %>%
+  group_by(variable) %>%
+  summarise(Total = sum(value))%>%
+  rename(Sector = variable, Count = Total)
+
+ggplot(data=Kalungu_melt, aes(x=Sector, y=Count)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Sector", y = "Total") + theme_bw() +
+  theme(axis.text.x=element_text(size=rel(1.1), angle=90))+ ggtitle("Sector Overview in Kalungu Region")
+
+ggplot(data=Masaka_melt, aes(x=Sector, y=Count)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Sector", y = "Total") + theme_bw() +
+  theme(axis.text.x=element_text(size=rel(1.1), angle=90))+ ggtitle("Sector Overview in Masaka Region")
+print(Kalungu_melt)
+print(Masaka_melt)
+```
+
+
+**What is the average monthly income?**
+
+```{r}
+Q12_vector <- data$Q12
+#calculate mean
+Q12_mean <- mean(Q12_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+print(Q12_mean)
+
+#calculate standard deviation
+Q12_sd <- sd(Q12_vector, na.rm = TRUE)#remove anyone who didn't answer this question
+print(Q12_sd)
+```
+Mean = `Q12_mean`
+Standard Deviation = `Q12_sd`
+
+**What is the daily expenditure before lockdown? **
+```{r}
+Q13_vector <- data$Q13
+#calculate mean
+Q13_mean <- mean(Q13_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+print(Q13_mean)
+
+#calculate standard deviation
+Q13_sd <- sd(Q13_vector, na.rm = TRUE)#remove anyone who didn't answer this question
+print(Q13_sd)
+
+```
+Mean = 24751.97
+Standard Deviation = 50977.15
+
+
+**What is the daily expenditure after lockdown?**
+
+```{r}
+Q14_vector <- data$Q14
+#calculate mean
+Q14_mean <- mean(Q14_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+print(Q14_mean)
+
+#calculate standard deviation
+Q14_sd <- sd(Q14_vector, na.rm = TRUE)#remove anyone who didn't answer this question
+print(Q14_sd)
+
+```
+Mean = 18310.48
+Standard Deviation = 41787.67
+
+**How does the level of education of the respondent affect the economic status of a household? **
+```{r}
+education.lm <- lm(Q13 ~ Q3, data = data)
+summary(education.lm)
+```
+
+**How does of the level of education of the respondent affect the change in economic status of the household post-COVID19**
+
+```{r}
+#add new column 
+Difference <- data %>% 
+  select(Q3, Q13, Q14) %>%
+  mutate(Change = Q14 - Q13)
+
+difference.lm <- lm(Change ~ Q3, data = Difference)
+kable(coef(summary(difference.lm)), digits = c(3,3,3,3))
+```
+
+**What are the top 3 household expenses? **
+```{r}
+Groups <- c("Food", "PPE", "Medicine" ,"Water", "Electricity", "Fuel/charcoal", "Education", "Healthcare", "Other")
+
+Count <- c(sum(data$Q15.A),sum(data$Q15.B),sum(data$Q15.C),sum(data$Q15.D),sum(data$Q15.E),sum(data$Q15.F),sum(data$Q15.G),sum(data$Q15.H), length(which(!is.na(data$Q15_Other))))
+
+Expense_data <- tbl_df(cbind(Groups, Count))
+Expense_data$Count <- as.numeric(Expense_data$Count)
+Expense_data <- Expense_data[order(-Count),]
+
+Expense_data <- Expense_data[1:3,]
+print(Expense_data)
+```
+Three highest expenses are food, water, and electricity
+
+**How many households have at least 1 member that require medication/medical care on a regular basis? **
+
+```{r}
+#fixing minor error seen in the data
+data$Q16[125] <- "A"
+data$Q16_Optional[125] <- "ARVS"
+
+#Convert letter to option
+data$Q16[data$Q16 == "A"] <- "Yes"
+data$Q16[data$Q16 == "B"] <- "No"
+
+#code to print bar graph
+ggplot(data, aes(x = Q16)) + geom_bar(fill="steelblue") + labs(x = "Does anyone in the home take medication?", y = "Count")
+
+medication_table <- count(data, vars = Q16)
+medication_table <-medication_table %>%
+  rename(Medication = vars, Count = n) %>%
+  mutate(Percent = (Count/total)*100)
+print(medication_table)
+
+```
+
+**What is the most common medication used? **
+```{r}
+#unique(data$Q16_Optional)
+#need to check with group about this since there are some inconsistencies with the medications listed
+
+Natural.Herbs <- c("LOCAL HERBS")
+Blood.Pressure <- c("HIGH BLOOD PRESSURE MEDICATION","HIGH BLOOD PRESSURE", "PRESSURE","FOR PRESSURE")
+HIV <- c("ART", "HIV", "ARUS", "ANTIRETROUIRAL MEDICATION", "ARVS", "ANTIRETROVIRAL MEDICATION", "ARVIS", "ANTIRETROVIRAL MEDICINE","ATIRCTROVIRAL MEDICATION")
+Diabetes <- c("DIABETES","DIABATES MEDICINE","DIABETES DRUG, WENT TO GOVERNMENT HEALTH CENTRE III IN BUKULULA")
+Asthma <- c("ASTHMA MEDICATION", "ASTHMA")
+Ulcer <- c("ULCER DRUG")
+Unknown <- c("DRUG NOT KNOWN TO RESPONDENT", "DON'T KNOW","PREFERRED NOT TO MENTION" )
+Herpes <- c("HERPES")
+Heart.Medication <- c("HEART MEDICINE", "HEART DISEASES","HEART MEDICATION (RECEIVED EVERY WEEK)")
+Mental.Health <- c("MENTAL CONDITION","MENTAL DRUGS, ALSO RECEIVES PYSCHOLOGICAL SUPPORT" )
+Eye <- c("EYE CONDITION")
+Cancer <- c("PROSTATE CANCER MEDICATION" )
+Pain <- c( "BACK PAIN DRUGS")
+Anemic <- c("PHOLIC ACID","FOLIC ACID","SICKLE CELL MEDICINE")
+Malaria <- c("COARTEM DRUG (MALARIA)")
+
+
+medication <- data[,"Q16_Optional"]
+
+medication$Natural <- 0
+medication$Bloodpressure <- 0
+medication$HIV <- 0
+medication$Diabetes <- 0
+medication$Asthma <- 0
+medication$Ulcer <- 0
+medication$Unknown <- 0
+medication$Herpes <- 0
+medication$Heart <- 0
+medication$MentalHealth <- 0
+medication$Eye <- 0
+medication$Cancer <- 0
+medication$Pain <- 0
+medication$Anemic <- 0
+medication$Malaria <- 0
+
+Diseases <- c("Natural", "Bloodpressure" , "HIV", "Diabetes", "Asthma", "Ulcer", "Unknown", "Herpes", "Heart", "MentalHealth", "Eye", "Cancer", "Pain", "Anemic", "Malaria")
+
+Groups <- list(Natural.Herbs, Blood.Pressure, HIV, Diabetes, Asthma, Ulcer, Unknown, Herpes, Heart.Medication, Mental.Health, Eye, Cancer, Pain, Anemic, Malaria)
+
+for(type in Groups){
+  for(med in type){
+    for(i in 1:nrow(medication)){
+      for(dis in Diseases){
+        if(medication[i,dis] == 1){
+          next
+        }
+        else{
+          medication[i,dis] <- ifelse(grepl(med, data[i,"Q16_Optional"],ignore.case = TRUE),1,0)
+        }
+      }
+    }
+  }
+}
+
+
+
+```
+
+**What is the frequency of different illnesses in the sample population? **
+```{r}
+Q17_Options <-c("Q17.A", "Q17.B","Q17.C", "Q17.D", "Q17.E", "Q17.F","Q17.G")
+for(x in Q17_Options){
+  data[x] <- 0
+}
+
+for(i in 1:nrow(data)){
+  sen <- strsplit(data$Q15[i], ",")
+  data[i,"Q17.A"] <- ifelse(grepl("A", sen),1,0)
+  data[i,"Q17.B"] <- ifelse(grepl("B", sen),1,0)
+  data[i,"Q17.C"] <- ifelse(grepl("C", sen),1,0)
+  data[i,"Q17.D"] <- ifelse(grepl("D", sen),1,0)
+  data[i,"Q17.E"] <- ifelse(grepl("E", sen),1,0)
+  data[i,"Q17.F"] <- ifelse(grepl("F", sen),1,0)
+  data[i,"Q17.G"] <- ifelse(grepl("G", sen),1,0)
+}
+
+ill <- c("HIV", "Diabetes","Heart Condition", "Tuberculosis", "Malaria", "Cancer","Other")
+count <- c(sum(data$Q17.A), sum(data$Q17.B), sum(data$Q17.C),sum(data$Q17.D),sum(data$Q17.E),sum(data$Q17.F),sum(data$Q17.G))
+
+Q17_count <- do.call(rbind, Map(data.frame, Illness=ill, Frequency=count))
+
+#add percentage of homes with illness
+Q17_count <- Q17_count %>%
+  mutate(Percentage = (Frequency/nrow(data))*100)
+
+print(Q17_count)
+
+
+ggplot(Q17_count, aes(x = Illness, y = Frequency)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Illness", y = "Count")+ ggtitle("Frequency of Illness Based on Raw Numbers")
+
+ggplot(Q17_count, aes(x = Illness, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Illness", y = "Percentage (%)")+ ggtitle("Frequency of Illness Based on Proportion")
+
+```
+
+**What does the sample population think are the common symptoms of COVID19?**
+```{r}
+symptoms <- subset(data, select = c("Q18.A","Q18.B","Q18.C","Q18.D","Q18.E","Q18.F","Q18.G","Q18.H","Q18.I","Q18.J","Q18.K"))
+
+symptoms <- melt(symptoms, measure.vars = c("Q18.A","Q18.B","Q18.C","Q18.D","Q18.E","Q18.F","Q18.G","Q18.H","Q18.I","Q18.J","Q18.K"))
+
+symptoms <- aggregate(symptoms$value, by=list(Category=symptoms$variable), FUN=sum)
+symptoms$x <- (symptoms$x/total)*100
+
+
+print(symptoms)
+
+symptoms$Category <- unfactor(symptoms$Category)
+symptoms$Category[symptoms$Category == "Q18.A"] <- "Fever"
+symptoms$Category[symptoms$Category == "Q18.B"] <- "Dry Cough"
+symptoms$Category[symptoms$Category == "Q18.C"] <- "Short Breath"
+symptoms$Category[symptoms$Category == "Q18.D"] <- "Fatigue"
+symptoms$Category[symptoms$Category == "Q18.E"] <- "Sneezing"
+symptoms$Category[symptoms$Category == "Q18.F"] <- "Sore throat"
+symptoms$Category[symptoms$Category == "Q18.G"] <- "Runny Nose"
+symptoms$Category[symptoms$Category == "Q18.H"] <- "Watery eyes"
+symptoms$Category[symptoms$Category == "Q18.I"] <- "Diarrhea"
+symptoms$Category[symptoms$Category == "Q18.J"] <- "Vomiting"
+symptoms$Category[symptoms$Category == "Q18.K"] <- "Not Sure"
+
+
+ggplot(data=symptoms, aes(x=Category, y=x)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Symptoms", y = "Percentage (Out of 100)")
+
+```
+
+
+**Does the education level of the respondent affect their knowledge of additional symptoms of COVID19? **
+```{r}
+
+# Too many NAs
+```
+
+**What does the sample population think are the common methods in which COVID19 spreads?**
+```{r}
+data %>% 
+  select(Q20.A:Q20.I) %>% 
+  colSums(na.rm=TRUE) * 100 / nrow(data) # percent for each option
+```
+
+**What percent of the sample population knows the common methods in which COVID19 spreads?**
+```{r}
+data %>% 
+  filter(Q20.B==1 & Q20.D==1 & Q20.E==1) %>% # sample that selected all of the correct answers ( B, D, E)
+  nrow() * 100 / nrow(data) # compute their percent
+```
+
+
+**Does the sample population know important facts about COVID19? **
+```{r}
+false_cols <- c("Q21.1", "Q21.2", "Q21.4", "Q21.5", "Q21.6", "Q21.10")
+data <- data  %>% 
+  mutate(across(all_of(false_cols), function(x) {
+    ifelse(x=="FALSE", 1, 0)
+  }))
+true_cols <- c("Q21.3", "Q21.7", "Q21.8", "Q21.9", "Q21.11")
+data <- data  %>% 
+  mutate(across(all_of(true_cols), function(x) {
+    ifelse(x=="TRUE", 1, 0)
+  }))
+data <- data %>%
+  mutate(across(Q22, function(x) {
+  ifelse(x=="B", 1, 0)
+  }))
+data[, "knowledge_score"] <- data %>% 
+  select(Q21.1:Q22, -Q21.4_Notes)  %>% 
+  rowSums(na.rm=TRUE)
+
+data %>% 
+  select(Q21.1:Q21.11, -Q21.4_Notes)  %>% 
+  colSums(na.rm=TRUE) * 100 / nrow(data) # percent correct for each option
+```
+
+**Does the level of education of the respondent affect the COVID19 knowledge score?**
+```{r}
+
+data[, "knowledge_score"] <- data %>% 
+  select(Q21.1:Q21.11, -Q21.4_Notes)  %>% 
+  rowSums(na.rm=TRUE)
+
+data %>%
+  select(Q3, knowledge_score) %>%
+  group_by(Q3) %>%
+  summarize(count=n(),
+            mean_score=mean(knowledge_score, na.rm = TRUE))
+
+cor(data %>% 
+         select(Q3, knowledge_score) %>% 
+         mutate_if(is.factor, as.numeric))
+
+ggcorr(data %>% 
+         select(Q3, Q21.1:Q21.11, -Q21.4_Notes, knowledge_score) %>% 
+         mutate_if(is.factor, as.numeric), 
+       label=TRUE, 
+       label_size=2, 
+       label_round=2, 
+       label_alpha=TRUE)
+```
+
+**Does the sector in which in the household work in affect the respondent’s COVID19 knowledge score?**
+```{r}
+
+sector.lm <- lm(knowledge_score  ~ agriculture + transportation + education + sponsership + construction + business + trade + government + law + health + food + other, data = data)
+
+kable(coef(summary(sector.lm)), digits = c(3,3,3,3))
+
+```
+
+**How many people think that handwashing can protect against COVID19? **
+```{r}
+data %>%
+  select(Q22) %>%
+  group_by(Q22) %>%
+  summarize(percent_score=n() * 100 / nrow(data))
+```
+
+**Does the sample population believe that COVID19 could be treated during the survey period? **
+```{r}
+data %>% count(Q23.1) # need to coalesce values
+```
+
+**Correlations on entire data**
+```{r}
+
+library(corrplot)
+sig=0.5
+# convert data to numeric in order to run correlations
+# convert to factor first to keep the integrity of the data
+# each value will become a number rather than turn into NA
+df_cor <- data %>% mutate_if(is.character, as.factor)
+df_cor <- df_cor %>% mutate_if(is.factor, as.numeric)
+
+# run a correlation and drop the insignificant ones
+corr <- cor(df_cor)
+# prepare to drop duplicates and correlations of 1     
+corr[lower.tri(corr, diag=TRUE)] <- NA 
+# drop perfect correlations
+# corr[corr == 1] <- NA 
+# turn into a 3-column table
+corr <- as.data.frame(as.table(corr))
+# remove the NA values from above 
+corr <- na.omit(corr) 
+# select significant values  
+corr <- subset(corr, abs(Freq) > sig) 
+# sort by highest correlation
+corr <- corr[order(-abs(corr$Freq)),] 
+# print table
+print(corr)
+# turn corr back into matrix in order to plot with corrplot
+mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
+
+# plot correlations visually
+corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
+```
+
+**Does the sector in which in the household work in affect the respondent’s COVID19 knowledge score? (STILL WORK IN PROGRESS)**
+
+```{r}
+#create answer key
+#ANSWERS
+Q18_ans <- c("A", "B", "C", "D") #does it have to be all of them or some of them?
+Q20_ans <- c("B", "D", "E") #does it have to be all of them or some of them?
+Q21_ans <- c("False", "False", "True", "False", "False", "False", "True", "True", "True", "False","True")
+Q22_ans <- c("B")
+Q23_ans <- c("D")
+
+
+
+#education.lm <- lm(Q13 ~ Q3, data = data)
+
+
+```
+
+**How many people think that handwashing can protect against COVID19?**
+
+```{r}
+Q22_table <- data %>%
+  count(Q22)
+
+Q22_table$Percentage <- (Q22_table$n/total)*100
+Q22_table <- Q22_table %>%
+  rename(Option = Q22, Count = n)
+
+print(Q22_table)
+
+```
+
+
+**How does handwashing protect against COVID19 (if they selected “yes”)**
+
+```{r}
+Q23_table <- Q22_table[-c(4,5),] #remove other options
+print(Q23_table) #printed chart since numbers are small
+
+ggplot(Q23_table, aes(x = Option, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Option", y = "Count")
+```
+
+**Does the sample population believe that COVID19 could be treated during the survey period? **
+
+```{r}
+Q23_1_table <- data %>%
+  count(Q23.1)
+
+Q23_1_table$Percentage <- (Q23_1_table$n/total)*100
+Q23_1_table <- Q23_1_table %>%
+  rename(Option = Q23.1, Count = n)
+
+print(Q23_1_table)
+```
+
+**Why does the sample population think COVID19 can be treated/not treated? **
+```{r}
+#Broke up Qustion 17 based on the following options 
+
+Q23_2_Options <-c("Q23.2.A", "Q23.2.B","Q23.2.C", "Q23.2.D", "Q23.2.E")
+for(x in Q23_2_Options){
+  data[x] <- 0
+}
+
+for(i in 1:nrow(data)){
+  sen <- strsplit(data$Q15[i], ",")
+  data[i,"Q23.2.A"] <- ifelse(grepl("A", sen),1,0)
+  data[i,"Q23.2.B"] <- ifelse(grepl("B", sen),1,0)
+  data[i,"Q23.2.C"] <- ifelse(grepl("C", sen),1,0)
+  data[i,"Q23.2.D"] <- ifelse(grepl("D", sen),1,0)
+  data[i,"Q23.2.E"] <- ifelse(grepl("E", sen),1,0)
+}
+
+Q23_2_Data <- data %>%
+  select(Q23.2.A, Q23.2.B,Q23.2.C, Q23.2.D, Q23.2.E)
+
+Q23_2_Data <- melt(Q23_2_Data, measure.vars = c("Q23.2.A", "Q23.2.B","Q23.2.C", "Q23.2.D", "Q23.2.E"))
+
+Q23_2_Data <- Q23_2_Data %>% 
+  rename(Option = variable, Value = value) %>%
+  group_by(Option) %>%
+  summarise(Total = sum(Value))
+
+ggplot(data=Q23_2_Data, aes(x=Option, y=Total)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Option", y = "# of households") + ggtitle("# of households who chose this option")
+
+print(Q23_2_Data)
+```
+
+
+**What is the respondent’s education level for each selection?**
+```{r}
+Q23__Data <- data %>%
+  select(Q3, Q23.1, Q23.2.A, Q23.2.B,Q23.2.C, Q23.2.D, Q23.2.E)
+
+Q23_1_BarChart <- Q23__Data %>%
+  select(Q3, Q23.1)
+
+#Plot for Question 23.1
+ggplot(data=Q23_1_BarChart, aes(x=Q23.1, fill = Q3)) + geom_bar(position="stack") + labs(x = "Choice", y = "Count") + ggtitle("Breakdown of Question 23.1 by Education")
+
+#table for Option 1
+print(Q23_1_BarChart)
+
+Q23_2_BarChart <- Q23__Data %>%
+  select(Q3, Q23.2.A, Q23.2.B,Q23.2.C, Q23.2.D, Q23.2.E)
+
+Q23_2_BarChart <- melt(Q23_2_BarChart, measure.vars = c("Q23.2.A", "Q23.2.B","Q23.2.C", "Q23.2.D", "Q23.2.E"))
+
+Q23_2_BarChart <- Q23_2_BarChart %>%
+  group_by(Q3, variable)%>%
+  summarise(value = sum(value))
+
+#Plot for Question 23.2
+ggplot(data=Q23_2_BarChart, aes(x=variable,y = value, fill = Q3)) + geom_bar(position="stack", stat="identity") + labs(x = "Choice", y = "Count") + ggtitle("Breakdown of Question 23.2 by Education")
+
+#table breakdown
+print(Q23_2_BarChart)
+```
+
+**What household economic statuses make up each selection?**
+```{r}
+#quantile(data$Q13, na.rm = TRUE) <- used to check the quantile breakdown
+
+#Create quantile category for each dataset based on output for quantile
+data$Quantile <- 0
+data$Quantile <- ifelse(data$Q13 <= 9000, "Low", 
+              ifelse(data$Q13 > 9000 & data$Q13 <= 20000, "Medium", "High"))
+data$Quantile <- factor(data$Quantile, levels = c("Low", "Medium", "High"))
+
+Economic_Q23_Data <- data %>%
+  select(Quantile,Q23.1, Q23.2.A, Q23.2.B,Q23.2.C, Q23.2.D, Q23.2.E )
+
+#Plot for Question 23.1
+ggplot(data=Economic_Q23_Data, aes(x=Q23.1, fill = Quantile)) + geom_bar(position="stack") + labs(x = "Choice", y = "Count") + ggtitle("Breakdown of Question 23.1 by Economic Range")
+
+#table for Question 1
+print(Economic_Q23_Data)
+
+Economic_Q23_2_Data <- Economic_Q23_Data %>%
+  select(Quantile, Q23.2.A, Q23.2.B,Q23.2.C, Q23.2.D, Q23.2.E)
+
+Economic_Q23_2_Data <- melt(Economic_Q23_2_Data, measure.vars = c("Q23.2.A", "Q23.2.B","Q23.2.C", "Q23.2.D", "Q23.2.E"))
+
+Economic_Q23_2_Data <- Economic_Q23_2_Data %>%
+  group_by(Quantile, variable)%>%
+  summarise(value = sum(value))
+
+#Plot for Question 23.2
+ggplot(data=Economic_Q23_2_Data, aes(x=variable,y = value, fill = Quantile)) + geom_bar(position="stack", stat="identity") + labs(x = "Choice", y = "Count") + ggtitle("Breakdown of Question 23.2 by Education")
+
+#table breakdown
+print(Economic_Q23_2_Data)
+
+```
+Note: 
+Quantile Breakdown is the following: 
+0%: 3000
+25%: 9000
+50%: 14000
+75%: 20000
+100%: 340000
+
+**What are the top 3 household supplies used to protect against COVID19? **
+```{r}
+#function to take list into strings
+string <- function(line){
+  line = as.list(unlist(strsplit(line,",")))
+}
+
+supplies <- c()
+for(i in 1:nrow(data)){
+  temp <- trimws(string(data$Q24[i]))
+  supplies <- append(supplies,list(temp))
+}
+
+supplies <- unlist(supplies,recursive=F)
+supplies <- lapply(supplies, function(i) list(unlist(i, recursive = TRUE)))
+supplies <- data.frame(lapply(rapply(supplies, enquote, how="unlist"), eval))
+
+```
+
+**What are the top 3 precautions taken to protect against COVID19?**
+
+
+**What are the top 3 actions taken in the event that someone in the household shows symptoms of COVID19?**
+
+**What are the top 3 actions taken in the event that the household was in a place with people that might have COVID19?**
+
+
+**What is the relationship between the source of information and the COVID19 knowledge score?**
+
+```{r}
+Q28_data <- data %>%
+  select(Q28.A, Q28.B, Q28.C, Q28.D, Q28.E, Q28.F, Q28_Other, knowledge_score)
+
+Q28_data <- Q28_data %>%
+  mutate(TV = case_when(Q28_Other %like% 'TV|TELE|TELEVISION|YOUTUBE' ~ 1)) %>%
+  mutate(Government = case_when(Q28_Other %like% 'HEALTH|POLIT|MEDICAL|MEDICINE' ~ 1)) %>% mutate(Q28.C = case_when(Q28_Other %like% 'FRIENDS|FRI|PEOPLE|COMMUNITY' | Q28.C == 1~ 1)) %>% mutate(Q28.B = case_when(Q28_Other %like% 'NEWSPAPER|NEW|NEWS' | Q28.B == 1~ 1)) %>% mutate(Q28.E = case_when(Q28_Other %like% 'PHONE' | Q28.E == 1~ 1) ) %>% rename(Radio = Q28.A, Newsletter = Q28.B, Friends = Q28.C, Religious.figures = Q28.D, SocialMedia = Q28.E)
+
+Q28_data <- select(Q28_data, -Q28_Other)
+Q28_data[is.na(Q28_data)] <- 0
+
+Source_Knowledge <- aov(knowledge_score ~ Radio + Newsletter + Friends + Religious.figures + SocialMedia + TV + Government, data = Q28_data)
+
+summary(Source_Knowledge)
+  
+
+```
+
+
+**What are the sources of COVID19 information for the sample population?**
+
+```{r}
+
+Q28_data <- select(Q28_data, -c(Q28.F, knowledge_score))
+
+Q28_melt <- melt(Q28_data, measure.vars = c("Radio", "Newsletter", "Friends", "Religious.figures", "SocialMedia", "TV", "Government"))
+
+Q28_melt <- Q28_melt %>%
+  group_by(variable) %>%
+  mutate(Value = sum(value))
+
+Q28_melt <- distinct(select(Q28_melt, -value), variable, Value)
+
+Q28_melt <- Q28_melt %>%
+  mutate(Percentage = (Value/nrow(data))*100)
+
+ggplot(data=Q28_melt, aes(x=variable, y=Value)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Source of Information", y = "# of households") + ggtitle("# of households who use each source for information")
+
+ggplot(data=Q28_melt, aes(x=variable, y=Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Source of Information", y = "Percentage of households") + ggtitle("% of households who use each source for information")
+
+print(Q28_melt)
+
+```
+
+**Is there a correlation between the number of times COVID19 news is obtained per week and education?**
+```{r}
+COVID_education.lm <- glm(Q29 ~ Q3, data = data)
+
+kable(coef(summary(COVID_education.lm)), digits = c(3,3,3,3))
+```
+
+**Is there a correlation between the number of times COVID19 news is obtained per week and economic status?**
+
+```{r}
+COVID_economic.lm <- glm(Q29 ~ Quantile, data = data)
+
+kable(coef(summary(COVID_economic.lm)), digits = c(3,3,3,3))
+
+```
+
+**Is there a correlation between the number of times  COVID19 news is obtained per week and age of respondent?**
+
+```{r}
+COVID_age.lm <- glm(Q29 ~ Age_of_Respondent, data = data)
+kable(coef(summary(COVID_age.lm)), digits = c(3,3,3,3))
+```
+**What is the (average/median) number of times  COVID19 news is obtained per week?**
+
+```{r}
+Q29_vector <- data$Q29
+#calculate mean
+Q29_mean <- mean(Q29_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate median
+Q29_med <- median(Q29_vector, na.rm = TRUE) #remove anyone who didn't answer this question
+#calculate mode
+Q29_mode <- mode(Q29_vector)
+
+#calculate range
+Q29_range <- range(Q29_vector, na.rm = TRUE) #remove anyone who didn't answer this
+
+print(Q29_mean) #mean
+print(Q29_med) #median
+print(Q29_mode) #mode
+quantile(Q29_vector, na.rm = TRUE) #quartiles
+```
+
+**What are the measures taken by households to limit the spread of COVID19?**
+```{r}
+Q30_data <- data %>%
+  select(Q30.A, Q30.B, Q30.C, Q30.D, Q30.E)
+  
+Q30_melt <- melt(Q30_data, measure.vars = c("Q30.A","Q30.B", "Q30.C", "Q30.D", "Q30.E"))
+
+Q30_melt <- Q30_melt %>%
+  group_by(variable) %>%
+  mutate(Value = sum(value))
+
+Q30_melt <- distinct(select(Q30_melt, -value), variable, Value)
+
+Q30_melt <- Q30_melt %>%
+  mutate(Percentage = (Value/nrow(data))*100) %>%
+  rename(Variable = variable)
+
+
+ggplot(data=Q30_melt, aes(x=Variable, y=Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Source of Information", y = "Percentage of households") + ggtitle("% of households who use each source for information")
+
+print(Q30_melt)
+  
+```
+
+**How do households handle children interacting with people from other households? Are they handling them correctly?**
+
+
+**Can social distancing rules be followed in common public locations?**
+
+```{r}
+#Home
+Home_data <- data %>%
+  select(Q32_Home) %>%
+  group_by(Q32_Home) %>%
+  tally() %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/nrow(data))*100)
+
+ggplot(Home_data, aes(x = Q32_Home, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Answer", y = "% of Households") + ggtitle("Percentage of households who can social distance at home")
+
+print(Home_data)
+
+#Workplace
+Work_data <- data %>%
+  select(Q32_Workplace) %>%
+  group_by(Q32_Workplace) %>%
+  tally() %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/nrow(data))*100)
+
+ggplot(Work_data, aes(x = Q32_Workplace, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Answer", y = "% of Households") + ggtitle("Percentage of households who can social distance at the workplace")
+
+print(Work_data)
+
+#Food Markets
+FoodMarkets_data <- data %>%
+  select(Q32_FoodMarkets) %>%
+  group_by(Q32_FoodMarkets) %>%
+  tally() %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/nrow(data))*100)
+
+ggplot(FoodMarkets_data, aes(x = Q32_FoodMarkets, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Answer", y = "% of Households") + ggtitle("Percentage of households who can social distance at food markets")
+
+print(FoodMarkets_data)
+
+#Health Clinics
+HealthClinic_data <- data %>%
+  select(Q32_HealthClinics) %>%
+  group_by(Q32_HealthClinics) %>%
+  tally() %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/nrow(data))*100)
+
+ggplot(HealthClinic_data, aes(x = Q32_HealthClinics, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Answer", y = "% of Households") + ggtitle("Percentage of households who can social distance at Health Clinics")
+
+print(HealthClinic_data)
+#Religious Gatherings
+Gatherings_data <- data %>%
+  select(Q32_ReligiousGatherings) %>%
+  group_by(Q32_ReligiousGatherings) %>%
+  tally() %>%
+  rename(Count = n) %>%
+  mutate(Percentage = (Count/nrow(data))*100)
+
+ggplot(Gatherings_data, aes(x = Q32_ReligiousGatherings, y = Percentage)) + geom_bar(stat="identity", fill="steelblue") + labs(x = "Answer", y = "% of Households") + ggtitle("Percentage of households who can social distance at Religious Gatherings")
+
+print(Gatherings_data)
+
+```
+
+**Do most respondents cover their faces when they go outside?**
+```{r}
+#quick data cleaning
+data$Q33[data$Q33 == "A"] <- "YES"
+
+Q33_data <- data %>%
+  select(Q33)
+
+
+Q33_data <- Q33_data %>%
+  group_by(Q33) %>%
+  tally() %>%
+  mutate(Percentage = (n/nrow(data)*100))
+
+ggplot(data=Q33_data, aes(x=Q33, y=Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Do respondents cover their faces when they go outside?", y = "Percentage of households") + ggtitle("% of households who cover their faces when they go outside")
+
+print(Q33_data)
+
+```
+
+```{r}
+Q33_data2 <- data %>%
+  select(Q33, Q33_YES)
+
+Q33_data2 <- Q33_data2 %>%
+  mutate(Masks = case_when(Q33_YES %like% 'MASK' ~ 1)) %>%
+  mutate(Cloth = case_when(Q33_YES %like% 'CLOTH|CHEIF|VEIL' ~1))
+
+Q33_data2 <- Q33_data2 %>%
+  filter(Q33 == "YES") %>%
+  select("Masks", "Cloth")
+
+Q33_melt <- melt(Q33_data2, measure.vars = c("Masks", "Cloth"))
+Q33_melt <- na.omit(Q33_melt)
+
+Q33_melt <- Q33_melt %>%
+  group_by(variable) %>%
+  tally() %>%
+  rename(Type = variable, Count = n) %>%
+  mutate(Percentage = Count/nrow(Q33_data2))
+  
+ggplot(data=Q33_melt, aes(x=Type, y=Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Type of Mask", y = "Percentage of households") + ggtitle("% of households to use masks based on material")
+
+print(Q33_data)
+
+```
+
+**How important does the sample population consider mental health relative to physical health?**
+
+```{r}
+data$Q34[data$Q34 == "A"] <- "More Important"
+data$Q34[data$Q34 == "B"] <- "Somewhat Important"
+data$Q34[data$Q34 == "C"] <- "Equally Important"
+data$Q34[data$Q34 == "D"] <- "Somewhat Less Important"
+data$Q34[data$Q34 == "E"] <- "Not Important at All"
+data$Q34[data$Q34 == "F"] <- "Refused to Answer"
+
+Q34_data <- data %>%
+  select(Q34) %>%
+  group_by(Q34) %>%
+  tally() %>%
+  mutate(Percentage = (n/nrow(data))*100)
+
+ggplot(data=Q34_data, aes(x=Q34, y = Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Level") + ggtitle("How important is mental health compared to physical health?") + theme(axis.text.x = element_text(angle = 90))
+
+print(Q34_data)
+
+```
+
+**How does the importance in which the respondent considers mental health relate to the respondent’s gender, age, education level, household size and number of children (<18) in the household. **
+
+```{r}
+#How does the importance in which the respondent considers mental health relate to #the respondent’s gender, age, education level, household size and number of children #(<18) in the household. 
+
+data$Q34 <- factor(data$Q34, levels = c("More Important", "Somewhat Important", "Equally Important", "Somewhat Less Important", "Not Important at All", "Refused to Answer"))
+
+#mental.health.glm <- (Q34 ~ female + Age_of_Respondent + Q3 + Q6 + Q7)
+#kable(coef(summary(mental.health.glm)), digits = c(3,3,3,3))
+
+```
+
+
+**How many households know someone who has tested positive for COVID19?**
+```{r}
+data$Q35[data$Q35 == "A"] <- "Yes"
+data$Q35[data$Q35 == "B"] <- "No"
+data$Q35[data$Q35 == "C"] <- "I don't know"
+
+Q35_data <- data %>%
+  select(Q35) %>%
+  group_by(Q35) %>%
+  tally() %>%
+  mutate(Percentage = (n/nrow(data))*100)
+
+ggplot(data=Q35_data, aes(x=Q35, y = Percentage)) + geom_bar(stat="identity", fill = "royalblue4") + labs(x = "Level") + ggtitle("How many people know someone with COVID?") 
+
+print(Q35_data)
+
+```
+
+**Does knowing someone who has tested positive for COVID19 increase the COVID19 knowledge score? **
+
+```{r}
+positive.lm <- glm(knowledge_score ~ Q35, data = data)
+kable(coef(summary(positive.lm)), digits = c(3,3,3,3))
+```
+
+## Sindu's personal analysis
+
+Taking stuff from earlier but then addressing questions that may be in interest to us
+
+**Does the district you live in impact your COVID knowledge score**
+
+```{r}
+Masaka_data <- subset(data, District == "MASAKA")
+Kalungu_data <- subset(data, District == "KALUNGU")
+
+t.test(Masaka_data$knowledge_score, Kalungu_data$knowledge_score)
+
+```
+Assuming significance at the 5% level, district you live in does not impact the knowledge score
+
+**Does gender impact COVID knowledge score?** 
+```{r}
+Male_data <- subset(data, Female == "Male")
+Female_data <- subset(data, Female == "Female")
+
+t.test(Male_data$knowledge_score, Female_data$knowledge_score)
+```
+
+Assuming significance at the 5% level, gender does not impact the knowledge score
+
+**What could impact COVID knowledge score**
+
+```{r}
+knowledge.glm <- lm(knowledge_score ~ District + Female + Age_of_Respondent + Q3 + Q6 + Quantile + Q16 + Q22 + Q23.1 + agriculture + transportation + education + sponsership + construction + business + trade + government + law + health + food + other + Q29, data = data )
+
+output <- kable(coef(summary(knowledge.glm)), digits = c(3,3,3,3))
+print(output)
+
+```
