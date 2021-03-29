@@ -1,1 +1,44 @@
-# Put Code here 
+## Sindu's personal analysis
+
+Taking stuff from earlier but then addressing questions that may be in interest to us
+
+**Does the district you live in impact your COVID knowledge score**
+
+```{r}
+Masaka_data <- subset(data, District == "MASAKA")
+Kalungu_data <- subset(data, District == "KALUNGU")
+
+t.test(Masaka_data$knowledge_score, Kalungu_data$knowledge_score)
+
+#average Maska knowledge score
+print(mean(Masaka_data$knowledge_score))
+
+#average Kalungu knowledge score
+print(mean(Kalungu_data$knowledge_score))
+
+```
+
+Assuming significance at the 5% level, district you live in does not impact the knowledge score. However, it is signitificant at the 10% level. Those living in Masaka have a higher score compared to Kalungu. Kalungu has about 27 households that have transportation as their occupation compared to Masaka's 8 households
+
+**Does gender impact COVID knowledge score?** 
+```{r}
+Male_data <- subset(data, Female == "Male")
+Female_data <- subset(data, Female == "Female")
+
+t.test(Male_data$knowledge_score, Female_data$knowledge_score)
+```
+
+Assuming significance at the 5% level, gender does not impact the knowledge score
+
+**What could impact COVID knowledge score**
+
+```{r}
+knowledge.glm <- lm(knowledge_score ~ District + Female + Age_of_Respondent + Q3 + Q6 + Quantile + Q16 + Q22 + Q23.1 + agriculture + transportation + education + sponsership + construction + business + trade + government + law + health + food + other + Q29, data = data )
+
+output <- kable(coef(summary(knowledge.glm)), digits = c(3,3,3,3))
+print(output)
+
+```
+
+
+
